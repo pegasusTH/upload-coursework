@@ -1,0 +1,77 @@
+---
+title: "course project for practical machine learning"
+author: "wang tianhua"
+date: "May 21, 2017"
+output: html_document
+---
+
+Project write-up for the course Practical machine learning
+
+The sample data were saved to local drive and imported with the commands
+
+> library(readr)
+> pml_training<-read_csv("C:/Users/wangth/Desktop/machine learning course data/pml-training.csv")
+
+Among the 160 variables, many contain NA which need to be removed as these incomplete variables shall be left out of the model at initial attempt. 
+
+> Training_trimmed<-pml_training[ , colSums(is.na(pml_training)) == 0] 
+#Training_trimmed contains only 57 variables
+
+For this type of classification problem, I chose to use random forest algorithm to build the predictive model. And on examining the data, only data related to exercise were included in model building
+
+> training_trimmed2<-Training_trimmed[,8:57]
+> modFit <- train(classe~ .,data=training_trimmed2,method="rf",prox=TRUE)
+
+However, an error message was displayed
+
+Something is wrong; all the Accuracy metric values are missing:
+    Accuracy       Kappa    
+ Min.   : NA   Min.   : NA  
+ 1st Qu.: NA   1st Qu.: NA  
+ Median : NA   Median : NA  
+ Mean   :NaN   Mean   :NaN  
+ 3rd Qu.: NA   3rd Qu.: NA  
+ Max.   : NA   Max.   : NA  
+ NA's   :3     NA's   :3  
+
+As I suspect the error is simply due to the huge size of the data, I attempted to use a subset of the data to build the model
+
+> inTrain <- createDataPartition(y=training_trimmed2$classe,p=0.1, list=FALSE)
+> training2 <- training_trimmed2[inTrain,]
+> modFit <- train(classe~ .,data=training2,method="rf",prox=TRUE)
+> modFit
+Random Forest 
+
+1964 samples
+  49 predictor
+   5 classes: 'A', 'B', 'C', 'D', 'E' 
+
+No pre-processing
+Resampling: Bootstrapped (25 reps) 
+Summary of sample sizes: 1964, 1964, 1964, 1964, 1964, 1964, ... 
+Resampling results across tuning parameters:
+
+  mtry  Accuracy   Kappa    
+   2    0.9167071  0.8945336
+  25    0.9227961  0.9022876
+  49    0.9111132  0.8875338
+
+Accuracy was used to select the optimal model using 
+ the largest value.
+The final value used for the model was mtry = 25.
+
+Based on this subset of data, a random forest model was build which took around 30mins running time on my pc. By default, a bootstrapping was used to validate the model as pointed by some bootstrapping samples with replacement which is different from cross validation with various k values.
+
+This time, there is no error message, which seems to be confirming my suspicion that the previous error message is caused by the huge number entries of the data. So I tested this model as it is showing an 92% accuracy with mtry=25, which is a hyperparameter of the random forest model that determines how many variables the model uses to split the trees. Since the accuracy is quite good, I tested this model on the test data set
+
+> pml_testing<-read_csv("C:/Users/wangth/Desktop/machine learning course data/pml-testing.csv")
+> pred <- predict(modFit,pml_testing)
+> print(pred)
+ [1] B A A A A E D D A A B C B A E E A B B B
+Levels: A B C D E
+
+ 
+I keyed in the prediction in the final quiz and indeed, a 90% accuracy was achieved.
+ 
+It will be interesting that I can utilize other 90% of the data and build other models and stack them to get models with better prediction power. I can also chose different k values of corss validation to see its effect on the accuracy of resulting model. 
+
